@@ -5,12 +5,7 @@
 #include "Window.h"
 
 // ファイルダイアログ
-#include "nfd.hpp"
-// Windows のとき
-#if defined(_MSC_VER)
-// リンクするライブラリ
-#  pragma comment(lib, "lib\\" GLFW3_PLATFORM "\\" GLFW3_CONFIGURATION "\\nfd.lib")
-#endif
+#include "nfd.h"
 
 // 初期モデルデータ
 static std::string model{ "logo.obj" };
@@ -50,9 +45,6 @@ void app()
   //
   // ImGui の初期設定
   //
-
-  // Native File Dialog Extended の初期化
-  NFD_Init();
 
   //ImGuiIO& io = ImGui::GetIO();
   //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
@@ -111,18 +103,17 @@ void app()
         if (ImGui::MenuItem("Open Model File"))
         {
           // ファイルダイアログから得るパス
-          nfdchar_t* filepath(NULL);
+          nfdchar_t* filepath(nullptr);
 
           // ファイルダイアログを開く
-          const nfdfilteritem_t filter[]{ "Wavefront OBJ", "obj" };
-          if (NFD_OpenDialog(&filepath, filter, 1, nullptr) == NFD_OKAY)
+          if (NFD_OpenDialog("obj", nullptr, &filepath) == NFD_OKAY)
           {
             // 画像を読み込む
             object = GgSimpleObj(filepath, true);
-          }
 
-          // ファイルパスの取り出しに使ったメモリを開放する
-          if (filepath) NFD_FreePath(filepath);
+            // ファイルパスの取り出しに使ったメモリを開放する
+            free(filepath);
+          }
         }
 
         // 終了
@@ -170,9 +161,4 @@ void app()
     // カラーバッファを入れ替えてイベントを取り出す
     window.swapBuffers();
   }
-
-#ifdef USE_IMGUI
-  // Native File Dialog Extended 終了
-  NFD_Quit();
-#endif
 }
