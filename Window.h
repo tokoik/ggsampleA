@@ -32,12 +32,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ** \date March 31, 2021
 */
 
-// Oculus Rift を使うなら
-//#define USE_OCULUS_RIFT
-
-// Dear ImGui を使うなら
-#define USE_IMGUI
-
 // 使用するマウスのボタン数
 constexpr int BUTTON_COUNT(3);
 
@@ -47,6 +41,19 @@ constexpr int INTERFACE_COUNT(3);
 // 補助プログラム
 #include "gg.h"
 using namespace gg;
+
+// Dear ImGui を使うなら
+//#define USE_IMGUI
+
+// ImGui の組み込み
+#ifdef USE_IMGUI
+#  include "imgui.h"
+#  include "imgui_impl_glfw.h"
+#  include "imgui_impl_opengl3.h"
+#endif
+
+// Oculus Rift を使うなら
+//#define USE_OCULUS_RIFT
 
 // Oculus Rift SDK ライブラリ (LibOVR) の組み込み
 #ifdef USE_OCULUS_RIFT
@@ -64,13 +71,6 @@ using namespace gg;
 #    include <dxgi.h> // GetDefaultAdapterLuid のため
 #    pragma comment(lib, "dxgi.lib")
 #  endif
-#endif
-
-// ImGui の組み込み
-#ifdef USE_IMGUI
-#  include "imgui.h"
-#  include "imgui_impl_glfw.h"
-#  include "imgui_impl_opengl3.h"
 #endif
 
 // 標準ライブラリ
@@ -160,11 +160,11 @@ class Window
 
 #ifdef USE_OCULUS_RIFT
   //
-  // Oculus Rift
+  // Oculus Rift 用のメンバ
   //
 
   // Oculus Rift のセッション
-  ovrSession session;
+  static ovrSession session;
 
   // Oculus Rift の状態
   ovrHmdDesc hmdDesc;
@@ -172,7 +172,7 @@ class Window
   // Oculus Rift のスクリーンのサイズ
   GLfloat screen[ovrEye_Count][4];
 
-  // Oculus Rift 表示用の FBO
+  // Oculus Rift へのレンダリングに使う FBO
   GLuint oculusFbo[ovrEye_Count];
 
   // ミラー表示用の FBO
@@ -186,7 +186,7 @@ class Window
   // Oculus Rift にレンダリングするフレームの番号
   long long frameIndex;
 
-  // Oculus Rift 表示用の FBO のデプステクスチャ
+  // Oculus Rift へのレンダリングに使う FBO のデプステクスチャ
   GLuint oculusDepth[ovrEye_Count];
 
   // ミラー表示用の FBO のサイズ
@@ -196,7 +196,7 @@ class Window
   ovrMirrorTexture mirrorTexture;
 
   // グラフィックスカードのデフォルトの LUID を得る
-  inline ovrGraphicsLuid GetDefaultAdapterLuid()
+  inline static ovrGraphicsLuid GetDefaultAdapterLuid()
   {
     ovrGraphicsLuid luid = ovrGraphicsLuid();
 
@@ -224,7 +224,7 @@ class Window
   }
 
   // グラフィックスカードの LUID の比較
-  inline int Compare(const ovrGraphicsLuid& lhs, const ovrGraphicsLuid& rhs)
+  inline static int Compare(const ovrGraphicsLuid& lhs, const ovrGraphicsLuid& rhs)
   {
     return memcmp(&lhs, &rhs, sizeof(ovrGraphicsLuid));
   }
@@ -261,7 +261,7 @@ class Window
   static void resize(GLFWwindow* window, int width, int height)
   {
     // このインスタンスの this ポインタを得る
-    Window* const instance(static_cast<Window*>(glfwGetWindowUserPointer(window)));
+    Window* const instance{ static_cast<Window*>(glfwGetWindowUserPointer(window)) };
 
     if (instance)
     {
@@ -299,12 +299,12 @@ class Window
   static void keyboard(GLFWwindow* window, int key, int scancode, int action, int mods)
   {
 #ifdef USE_IMGUI
-    // ImGui のウィンドウが選択されていたらキーボードの処理を行わない
-    if (ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow)) return;
+    // ImGui がキーボードを使うときはキーボードの処理を行わない
+    if (ImGui::GetIO().WantCaptureKeyboard) return;
 #endif
 
     // このインスタンスの this ポインタを得る
-    Window* const instance(static_cast<Window*>(glfwGetWindowUserPointer(window)));
+    Window* const instance{ static_cast<Window*>(glfwGetWindowUserPointer(window)) };
 
     if (instance && action)
     {
@@ -312,7 +312,7 @@ class Window
       if (instance->keyboardFunc) (*instance->keyboardFunc)(instance, key, scancode, action, mods);
 
       // 対象のユーザインタフェース
-      auto& current_if(instance->ui_data[instance->ui_no]);
+      auto& current_if{ instance->ui_data[instance->ui_no] };
 
       switch (key)
       {
@@ -388,12 +388,12 @@ class Window
   static void mouse(GLFWwindow* window, int button, int action, int mods)
   {
 #ifdef USE_IMGUI
-    // マウスカーソルが ImGui のウィンドウ上にあったら Window クラスのマウス位置を更新しない
-    if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow)) return;
+    // ImGui がマウスを使うときは Window クラスのマウス位置を更新しない
+    if (ImGui::GetIO().WantCaptureMouse) return;
 #endif
 
     // このインスタンスの this ポインタを得る
-    Window* const instance(static_cast<Window*>(glfwGetWindowUserPointer(window)));
+    Window* const instance{ static_cast<Window*>(glfwGetWindowUserPointer(window)) };
 
     // マウスボタンの状態を記録する
     assert(button >= GLFW_MOUSE_BUTTON_1 && button < GLFW_MOUSE_BUTTON_1 + BUTTON_COUNT);
@@ -405,11 +405,11 @@ class Window
       if (instance->mouseFunc) (*instance->mouseFunc)(instance, button, action, mods);
 
       // 対象のユーザインタフェース
-      auto& current_if(instance->ui_data[instance->ui_no]);
+      auto& current_if{ instance->ui_data[instance->ui_no] };
 
       // マウスの現在位置を得る
-      const GLfloat x(current_if.mouse[0]);
-      const GLfloat y(current_if.mouse[1]);
+      const GLfloat x{ current_if.mouse[0] };
+      const GLfloat y{ current_if.mouse[1] };
 
       if (x < 0 || x >= instance->size[0] || y < 0 || y >= instance->size[1]) return;
 
@@ -433,12 +433,12 @@ class Window
   static void wheel(GLFWwindow* window, double x, double y)
   {
 #ifdef USE_IMGUI
-    // マウスカーソルが ImGui のウィンドウ上にあったら Window クラスのマウスホイールの回転量を更新しない
-    if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow)) return;
+    // ImGui がマウスを使うときは Window クラスのマウス位置を更新しない
+    if (ImGui::GetIO().WantCaptureMouse) return;
 #endif
 
     // このインスタンスの this ポインタを得る
-    Window* const instance(static_cast<Window*>(glfwGetWindowUserPointer(window)));
+    Window* const instance{ static_cast<Window*>(glfwGetWindowUserPointer(window)) };
 
     if (instance)
     {
@@ -446,7 +446,7 @@ class Window
       if (instance->wheelFunc) (*instance->wheelFunc)(instance, x, y);
 
       // 対象のユーザインタフェース
-      auto& current_if(instance->ui_data[instance->ui_no]);
+      auto& current_if{ instance->ui_data[instance->ui_no] };
 
       // マウスホイールの回転量の保存
       current_if.wheel[0] += static_cast<GLfloat>(x);
@@ -458,175 +458,7 @@ class Window
     }
   }
 
-#ifdef USE_OCULUS_RIFT
-  //
-  // Oculus Rift の使用終了
-  //
-  void terminateLibOVR()
-  {
-    // ミラー表示用の FBO を削除する
-    if (mirrorFbo) glDeleteFramebuffers(1, &mirrorFbo);
-
-    // ミラー表示に使ったテクスチャを開放する
-    if (mirrorTexture)
-    {
-#  if OVR_PRODUCT_VERSION > 0
-      ovr_DestroyMirrorTexture(session, mirrorTexture);
-#  else
-      glDeleteTextures(1, &mirrorTexture->OGL.TexId);
-      ovr_DestroyMirrorTexture(session, reinterpret_cast<ovrTexture*>(mirrorTexture));
-#  endif
-    }
-
-    // Oculus Rift のレンダリング用の FBO を削除する
-    glDeleteFramebuffers(ovrEye_Count, oculusFbo);
-
-    // Oculus Rift 表示用の FBO を削除する
-    for (int eye = 0; eye < ovrEye_Count; ++eye)
-    {
-#  if OVR_PRODUCT_VERSION > 0
-
-      // レンダリングターゲットに使ったテクスチャを開放する
-      if (layerData.ColorTexture[eye])
-      {
-        ovr_DestroyTextureSwapChain(session, layerData.ColorTexture[eye]);
-        layerData.ColorTexture[eye] = nullptr;
-      }
-
-      // デプスバッファとして使ったテクスチャを開放する
-      glDeleteTextures(1, &oculusDepth[eye]);
-      oculusDepth[eye] = 0;
-
-#  else
-
-      // レンダリングターゲットに使ったテクスチャを開放する
-      auto* const colorTexture(layerData.EyeFov.ColorTexture[eye]);
-      for (int i = 0; i < colorTexture->TextureCount; ++i)
-      {
-        const auto* const ctex(reinterpret_cast<ovrGLTexture*>(&colorTexture->Textures[i]));
-        glDeleteTextures(1, &ctex->OGL.TexId);
-      }
-      ovr_DestroySwapTextureSet(session, colorTexture);
-
-      // デプスバッファとして使ったテクスチャを開放する
-      auto* const depthTexture(layerData.EyeFovDepth.DepthTexture[eye]);
-      for (int i = 0; i < depthTexture->TextureCount; ++i)
-      {
-        const auto* const dtex(reinterpret_cast<ovrGLTexture*>(&depthTexture->Textures[i]));
-        glDeleteTextures(1, &dtex->OGL.TexId);
-      }
-      ovr_DestroySwapTextureSet(session, depthTexture);
-
-#  endif
-    }
-
-    // Oculus Rift のセッションを破棄する
-    ovr_Destroy(session);
-    session = nullptr;
-
-    // LibOVR を終了する
-    ovr_Shutdown();
-  }
-#endif
-
-  //
-  // GLFW のエラー表示
-  //
-  static void glfwErrorCallback(int error, const char* description)
-  {
-#ifdef __aarch64__
-    if (error == 65544) return;
-#endif
-    throw std::runtime_error(description);
-  }
-
 public:
-
-  //! \brief 初期化, 最初に一度だけ実行する.
-  //!   \param major 使用する OpenGL の major 番号, 0 なら無指定.
-  //!   \param minor 使用する OpenGL の minor 番号, major 番号が 0 なら無視.
-  static void init(int major = 0, int minor = 1)
-  {
-    // 最初に実行するときだけ true
-    static bool firstTime(true);
-
-    // 既に実行されていたら何もしない
-    if (!firstTime) return;
-
-    // 初期化済みの印をつける
-    firstTime = false;
-
-    // GLFW を初期化する
-    glfwSetErrorCallback(glfwErrorCallback);
-    if (glfwInit() == GL_FALSE) throw std::runtime_error("Can't initialize GLFW");
-
-    // 後始末を登録する
-    atexit(glfwTerminate);
-
-    // OpenGL の major 番号が指定されていれば
-    if (major > 0)
-    {
-      // OpenGL のバージョンを指定する
-      glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, major);
-      glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, minor);
-
-      if (major * 10 + minor >= 32)
-      {
-        // Core Profile を選択する
-        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-      }
-    }
-
-#ifdef USE_OCULUS_RIFT
-    // Oculus Rift (LibOVR) を初期化する
-    ovrInitParams initParams = { ovrInit_RequestVersion, OVR_MINOR_VERSION, NULL, 0, 0 };
-    if (OVR_FAILURE(ovr_Initialize(&initParams))) throw std::runtime_error("Can't initialize LibOVR");
-
-    // プログラム終了時に LibOVR を終了する
-    atexit(terminateLibOVR);
-
-    // Oculus Rift のセッションを作成する
-    ovrGraphicsLuid luid;
-    session = nullptr;
-    if (OVR_FAILURE(ovr_Create(&session, &luid))) throw std::runtime_error("Can't create Oculus Rift session");
-
-    // Oculus Rift へのレンダリングに使う FBO の初期値を設定する
-    for (int eye = 0; eye < ovrEye_Count; ++eye) oculusFbo[eye] = 0;
-
-    // ミラー表示に使う FBO の初期値を設定する
-    mirrorFbo = 0;
-    mirrorTexture = nullptr;
-
-#  if OVR_PRODUCT_VERSION > 0
-    // デフォルトのグラフィックスアダプタが使われているか確かめる
-    if (Compare(luid, GetDefaultAdapterLuid())) throw std::runtime_error("Graphics adapter is not default");
-
-    // Asynchronous TimeWarp 処理に使うフレーム番号の初期値を設定する
-    frameIndex = 0LL;
-
-    // Oculus Rift へのレンダリングに使う FBO のデプステクスチャの初期値を設定する
-    for (int eye = 0; eye < ovrEye_Count; ++eye) oculusDepth[eye] = 0;
-#  endif
-
-    // Oculus Rift ではダブルバッファリングしない
-    glfwWindowHint(GLFW_DOUBLEBUFFER, GL_FALSE);
-
-    // Oculus Rift では SRGB でレンダリングする
-    glfwWindowHint(GLFW_SRGB_CAPABLE, GL_TRUE);
-#endif
-
-#ifdef USE_IMGUI
-    // ImGui のバージョンをチェックする
-    IMGUI_CHECKVERSION();
-
-    // ImGui のコンテキストを作成する
-    ImGui::CreateContext();
-
-    // プログラム終了時には ImGui のコンテキストを破棄する
-    atexit([]{ ImGui::DestroyContext(); });
-#endif
-  }
 
   //! \brief コンストラクタ.
   //!   \param title ウィンドウタイトルの文字列.
@@ -645,6 +477,15 @@ public:
     , keyboardFunc{ nullptr }
     , mouseFunc{ nullptr }
     , wheelFunc{ nullptr }
+#ifdef USE_OCULUS_RIFT
+    , oculusFbo{ 0 }
+    , mirrorFbo{ 0 }
+#  if OVR_PRODUCT_VERSION > 0
+    , frameIndex{ 0LL }
+    , oculusDepth{ 0 }
+#  endif
+    , mirrorTexture{ nullptr }
+#endif
   {
     // ディスプレイの情報
     GLFWmonitor* monitor{ nullptr };
@@ -654,14 +495,14 @@ public:
     {
       // 接続されているモニタの数を数える
       int mcount;
-      GLFWmonitor** const monitors(glfwGetMonitors(&mcount));
+      GLFWmonitor** const monitors{ glfwGetMonitors(&mcount) };
 
       // セカンダリモニタがあればそれを使う
       if (fullscreen > mcount) fullscreen = mcount;
       monitor = monitors[fullscreen - 1];
 
       // モニタのモードを調べる
-      const GLFWvidmode* mode(glfwGetVideoMode(monitor));
+      const GLFWvidmode* mode{ glfwGetVideoMode(monitor) };
 
       // ウィンドウのサイズをディスプレイのサイズにする
       width = mode->width;
@@ -695,7 +536,72 @@ public:
     // ウィンドウのサイズ変更時に呼び出す処理を登録する
     glfwSetFramebufferSizeCallback(window, resize);
 
+#ifdef USE_IMGUI
+    // Setup Platform/Renderer bindings
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init(nullptr);
+#endif
+
+    // 垂直同期タイミングに合わせる
+    glfwSwapInterval(1);
+
+    // ビューポートと投影変換行列を初期化する
+    resize(window, width, height);
+  }
+
+  //! \brief コピーコンストラクタは使用禁止.
+  Window(const Window& w) = delete;
+
+  //! \brief 代入演算子は使用禁止.
+  Window& operator=(const Window& w) = delete;
+
+  //! \brief デストラクタ.
+  virtual ~Window()
+  {
+    // ウィンドウが作成されていなければ戻る
+    if (!window) return;
+
+#ifdef USE_IMGUI
+    // Shutdown Platform/Renderer bindings
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+#endif
+
+    // ウィンドウを破棄する
+    glfwDestroyWindow(window);
+  }
+
 #ifdef USE_OCULUS_RIFT
+
+  //! \brief Oculus Rift のセッション作成
+  static void initialize()
+  {
+    // session が有効なら何もしない
+    if (session) return;
+
+    // Oculus Rift (LibOVR) を初期化する
+    ovrInitParams initParams{ ovrInit_RequestVersion, OVR_MINOR_VERSION, NULL, 0, 0 };
+    if (OVR_FAILURE(ovr_Initialize(&initParams))) throw std::runtime_error("Can't initialize LibOVR");
+
+    // プログラム終了時に LibOVR を終了する
+    atexit(ovr_Shutdown);
+
+    // Oculus Rift のセッションを作成する
+    ovrGraphicsLuid luid;
+    if (OVR_FAILURE(ovr_Create(&session, &luid))) throw std::runtime_error("Can't create Oculus Rift session");
+
+    // プログラム終了時に Oculus のセッションを破棄する
+    atexit([] { ovr_Destroy(session); session = nullptr; });
+
+#  if OVR_PRODUCT_VERSION > 0
+    // デフォルトのグラフィックスアダプタが使われているか確かめる
+    if (Compare(luid, GetDefaultAdapterLuid())) throw std::runtime_error("Graphics adapter is not default");
+#  endif
+  }
+
+  //! \brief Oculus Rift の使用開始
+  void start()
+  {
     // Oculus Rift の情報を取り出す
     hmdDesc = ovr_GetHmdDesc(session);
 
@@ -729,18 +635,23 @@ public:
 #  else
     layerData.Header.Type = ovrLayerType_EyeFovDepth;
 #  endif
-    layerData.Header.Flags = ovrLayerFlag_TextureOriginAtBottomLeft;   // OpenGL なので左下が原点
 
-    // Oculus Rift 表示用の FBO を作成する
+    // OpenGL なので左下が原点
+    layerData.Header.Flags = ovrLayerFlag_TextureOriginAtBottomLeft;
+
+    // Oculus Rift のレンダリングに使う FBO を作成する
+    glGenFramebuffers(ovrEye_Count, oculusFbo);
+
+    // 全ての目について
     for (int eye = 0; eye < ovrEye_Count; ++eye)
     {
       // Oculus Rift の視野を取得する
-      const auto& fov(hmdDesc.DefaultEyeFov[ovrEyeType(eye)]);
+      const auto& fov{ hmdDesc.DefaultEyeFov[ovrEyeType(eye)] };
 
-      // Oculus Rift 表示用の FBO のサイズを求める
-      const auto textureSize(ovr_GetFovTextureSize(session, ovrEyeType(eye), fov, 1.0f));
+      // Oculus Rift 用の FBO のサイズを求める
+      const auto textureSize{ ovr_GetFovTextureSize(session, ovrEyeType(eye), fov, 1.0f) };
 
-      // Oculus Rift 表示用の FBO のアスペクト比を求める
+      // Oculus Rift 用の FBO のアスペクト比を求める
       aspect = static_cast<GLfloat>(textureSize.w) / static_cast<GLfloat>(textureSize.h);
 
       // Oculus Rift のスクリーンのサイズを保存する
@@ -758,7 +669,7 @@ public:
       layerData.Viewport[eye].Pos = OVR::Vector2i(0, 0);
       layerData.Viewport[eye].Size = textureSize;
 
-      // Oculus Rift 表示用の FBO のカラーバッファとして使うテクスチャセットの特性
+      // Oculus Rift 用の FBO のカラーバッファとして使うテクスチャセットの特性
       const ovrTextureSwapChainDesc colorDesc
       {
         ovrTexture_2D,                    // Type
@@ -772,7 +683,7 @@ public:
         0, 0
       };
 
-      // Oculus Rift 表示用の FBO のレンダーターゲットとして使うテクスチャチェインを作成する
+      // Oculus Rift 用の FBO のレンダーターゲットとして使うテクスチャチェインを作成する
       layerData.ColorTexture[eye] = nullptr;
       if (OVR_SUCCESS(ovr_CreateTextureSwapChainGL(session, &colorDesc, &layerData.ColorTexture[eye])))
       {
@@ -794,7 +705,7 @@ public:
           }
         }
 
-        // Oculus Rift 表示用の FBO のデプスバッファとして使うテクスチャを作成する
+        // Oculus Rift 用の FBO のデプスバッファとして使うテクスチャを作成する
         glGenTextures(1, &oculusDepth[eye]);
         glBindTexture(GL_TEXTURE_2D, oculusDepth[eye]);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32F, textureSize.w, textureSize.h, 0, GL_DEPTH_COMPONENT, GL_FLOAT, NULL);
@@ -813,12 +724,12 @@ public:
       layerData.EyeFov.Viewport[eye].Pos = OVR::Vector2i(0, 0);
       layerData.EyeFov.Viewport[eye].Size = textureSize;
 
-      // Oculus Rift 表示用の FBO のカラーバッファとして使うテクスチャセットを作成する
+      // Oculus Rift 用の FBO のカラーバッファとして使うテクスチャセットを作成する
       ovrSwapTextureSet* colorTexture;
       ovr_CreateSwapTextureSetGL(session, GL_SRGB8_ALPHA8, textureSize.w, textureSize.h, &colorTexture);
       layerData.EyeFov.ColorTexture[eye] = colorTexture;
 
-      // Oculus Rift 表示用の FBO のデプスバッファとして使うテクスチャセットを作成する
+      // Oculus Rift 用の FBO のデプスバッファとして使うテクスチャセットを作成する
       ovrSwapTextureSet* depthTexture;
       ovr_CreateSwapTextureSetGL(session, GL_DEPTH_COMPONENT32F, textureSize.w, textureSize.h, &depthTexture);
       layerData.EyeFovDepth.DepthTexture[eye] = depthTexture;
@@ -838,8 +749,8 @@ public:
     const ovrMirrorTextureDesc mirrorDesc
     {
       OVR_FORMAT_R8G8B8A8_UNORM_SRGB,   // Format
-      mirrorWidth = width,              // Width
-      mirrorHeight = height,            // Height
+      mirrorWidth = size[0],            // Width
+      mirrorHeight = size[1],           // Height
       0                                 // Flags
     };
 
@@ -873,55 +784,83 @@ public:
 
 #  endif
 
-    // Oculus Rift のレンダリング用の FBO を作成する
-    glGenFramebuffers(ovrEye_Count, oculusFbo);
-
     // Oculus Rift にレンダリングするときは sRGB カラースペースを使う
     glEnable(GL_FRAMEBUFFER_SRGB);
 
     // Oculus Rift への表示では垂直同期タイミングに合わせない
     glfwSwapInterval(0);
+  }
 
-#else
+  void terminate()
+  {
+    // 全ての目について
+    for (int eye = 0; eye < ovrEye_Count; ++eye)
+    {
+      // Oculus Rift へのレンダリング用の FBO を削除する
+      glDeleteFramebuffers(1, oculusFbo + eye);
+      oculusFbo[eye] = 0;
+
+#  if OVR_PRODUCT_VERSION > 0
+
+      // レンダリングターゲットに使ったテクスチャを削除する
+      if (layerData.ColorTexture[eye])
+      {
+        ovr_DestroyTextureSwapChain(session, layerData.ColorTexture[eye]);
+        layerData.ColorTexture[eye] = nullptr;
+      }
+
+      // デプスバッファとして使ったテクスチャを削除する
+      glDeleteTextures(1, oculusDepth + eye);
+      oculusDepth[eye] = 0;
+
+#  else
+
+      // レンダリングターゲットに使ったテクスチャを削除する
+      auto* const colorTexture(layerData.EyeFov.ColorTexture[eye]);
+      for (int i = 0; i < colorTexture->TextureCount; ++i)
+      {
+        const auto* const ctex(reinterpret_cast<ovrGLTexture*>(&colorTexture->Textures[i]));
+        glDeleteTextures(1, &ctex->OGL.TexId);
+      }
+      ovr_DestroySwapTextureSet(session, colorTexture);
+
+      // デプスバッファとして使ったテクスチャを削除する
+      auto* const depthTexture(layerData.EyeFovDepth.DepthTexture[eye]);
+      for (int i = 0; i < depthTexture->TextureCount; ++i)
+      {
+        const auto* const dtex(reinterpret_cast<ovrGLTexture*>(&depthTexture->Textures[i]));
+        glDeleteTextures(1, &dtex->OGL.TexId);
+      }
+      ovr_DestroySwapTextureSet(session, depthTexture);
+
+#  endif
+    }
+
+    // ミラー表示用の FBO を作っていたら削除する
+    if (mirrorFbo)
+    {
+      glDeleteFramebuffers(1, &mirrorFbo);
+      mirrorFbo = 0;
+    }
+
+    // ミラー表示用の FBO のカラーバッファ用のテクスチャを作っていたら削除する
+    if (mirrorTexture)
+    {
+#  if OVR_PRODUCT_VERSION > 0
+      ovr_DestroyMirrorTexture(session, mirrorTexture);
+#  else
+      glDeleteTextures(1, &mirrorTexture->OGL.TexId);
+      ovr_DestroyMirrorTexture(session, reinterpret_cast<ovrTexture*>(mirrorTexture));
+#  endif
+      mirrorTexture = nullptr;
+    }
+
+    // カラースペースを元に戻す
+    glDisable(GL_FRAMEBUFFER_SRGB);
 
     // 垂直同期タイミングに合わせる
     glfwSwapInterval(1);
-
-#endif
-
-    // ビューポートと投影変換行列を初期化する
-    resize(window, width, height);
-
-#ifdef USE_IMGUI
-    // Setup Platform/Renderer bindings
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init(nullptr);
-#endif
   }
-
-  //! \brief コピーコンストラクタは使用禁止.
-  Window(const Window& w) = delete;
-
-  //! \brief 代入演算子は使用禁止.
-  Window& operator=(const Window& w) = delete;
-
-  //! \brief デストラクタ.
-  virtual ~Window()
-  {
-    // ウィンドウが作成されていなければ戻る
-    if (!window) return;
-
-#ifdef USE_IMGUI
-    // Shutdown Platform/Renderer bindings
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-#endif
-
-    // ウィンドウを破棄する
-    glfwDestroyWindow(window);
-  }
-
-#ifdef USE_OCULUS_RIFT
 
   //! \brief Oculus Rift による描画開始.
   //!   \return 描画可能なら true.
@@ -1103,6 +1042,11 @@ public:
     // 描画データを Oculus Rift に転送する
     const auto* const layers{ &layerData.Header };
     if (OVR_FAILURE(ovr_SubmitFrame(session, frameIndex++, nullptr, &layers, 1)))
+    {
+      // 転送に失敗したら Oculus Rift の設定を最初からやり直す必要があるらしい
+      // けどめんどくさいのでウィンドウを閉じてしまう
+      setClose(GLFW_TRUE);
+    }
 #  else
     // Oculus Rift 上の描画位置と拡大率を求める
     ovrViewScaleDesc viewScaleDesc;
@@ -1117,12 +1061,12 @@ public:
     // 描画データを Oculus Rift に転送する
     const auto* const layers{ &layerData.Header };
     if (OVR_FAILURE(ovr_SubmitFrame(session, 0, &viewScaleDesc, &layers, 1)))
-#  endif
     {
       // 転送に失敗したら Oculus Rift の設定を最初からやり直す必要があるらしい
       // けどめんどくさいのでウィンドウを閉じてしまう
       setClose(GLFW_TRUE);
     }
+#  endif
 
     // ミラー表示
     if (mirror)
@@ -1139,23 +1083,15 @@ public:
 #  endif
       glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
 
-#ifdef USE_IMGUI
+#  ifdef USE_IMGUI
       // ImGui のフレームをレンダリングする
-      ImGui_ImplOpenGL3_RenderDrawData{ ImGui::GetDrawData() };
-#endif
+      ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+#  endif
 
       // 残っている OpenGL コマンドを実行する
       glFlush();
     }
   }
-
-  //! \brief 視点の数.
-  const int eyeCount = ovrEye_Count;
-
-#else
-
-  //! \brief 視点の数.
-  const int eyeCount = 1;
 
 #endif
 
@@ -1200,11 +1136,11 @@ public:
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
 
-    // マウスカーソルが ImGui のウィンドウ上にあったら Window クラスのマウス位置を更新しない
-    if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow)) return true;
-
-    // マウスの現在位置を調べる
+    // ImGui の状態を取り出す
     const ImGuiIO& io{ ImGui::GetIO() };
+
+    // ImGui がマウスを使うときは Window クラスのマウス位置を更新しない
+    if (io.WantCaptureMouse) return true;
 
     // マウスの位置を更新する
     current_if.mouse = std::array<GLfloat, 2>{ io.MousePos.x, io.MousePos.y };
@@ -1299,8 +1235,8 @@ public:
   bool getKey(int key)
   {
 #ifdef USE_IMGUI
-    // ImGui のウィンドウが選択されていたらキーボードの処理を行わない
-    if (ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow)) return false;
+    // ImGui がキーボードを使うときはキーボードの処理を行わない
+    if (ImGui::GetIO().WantCaptureKeyboard) return false;
 #endif
 
     return glfwGetKey(window, key) != GLFW_RELEASE;
