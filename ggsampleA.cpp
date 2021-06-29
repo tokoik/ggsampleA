@@ -2,7 +2,7 @@
 #define USE_IMGUI
 
 // ウィンドウ関連の処理
-#include "Window.h"
+#include "GgApp.h"
 
 // ファイルダイアログ
 #include "nfd.h"
@@ -22,7 +22,7 @@ static GgSimpleShader::Light light
 //
 // アプリケーション本体
 //
-void app()
+void GgApp::main(int argc, const char* const* argv)
 {
   // ウィンドウを作成する
   Window window{ "ggsampleA" };
