@@ -1,13 +1,12 @@
-﻿// Dear ImGui を使う
-#define USE_IMGUI
-
-// ウィンドウ関連の処理
+﻿//
+// ゲームグラフィックス特論宿題アプリケーション
+//
 #include "GgApp.h"
 
 // ファイルダイアログ
 #include "nfd.h"
 
-// 初期モデルデータ
+// 形状データ
 static std::string model{ "logo.obj" };
 
 // 光源データ
@@ -24,8 +23,8 @@ static GgSimpleShader::Light light
 //
 void GgApp::main(int argc, const char* const* argv)
 {
-  // ウィンドウを作成する
-  Window window{ "ggsampleA" };
+  // ウィンドウを作成する (この行は変更しないでください)
+  Window window{ argc > 1 ? argv[1] : "ggsampleA" };
 
   // 図形データを読み込む (大きさを正規化する)
   GgSimpleObj object{ model, true };
@@ -41,7 +40,7 @@ void GgApp::main(int argc, const char* const* argv)
   // ビュー変換行列を設定する
   const GgMatrix mv{ ggLookat(0.0f, 0.0f, 5.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f) };
 
-#ifdef USE_IMGUI
+#ifdef IMGUI_VERSION
   //
   // ImGui の初期設定
   //
@@ -83,7 +82,7 @@ void GgApp::main(int argc, const char* const* argv)
     // ウィンドウを消去する
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-#ifdef USE_IMGUI
+#ifdef IMGUI_VERSION
     //
     // ImGui によるユーザインタフェース
     //
@@ -136,6 +135,9 @@ void GgApp::main(int argc, const char* const* argv)
     if (ImGui::SliderFloat3("Light Position", light.position.data(), -10.0f, 10.0f, "%.2f"))
       lightBuffer.loadPosition(light.position);
     ImGui::End();
+
+    // ImGui のフレームに描画する
+    ImGui::Render();
 #endif
 
     // 投影変換行列を設定する
@@ -152,11 +154,6 @@ void GgApp::main(int argc, const char* const* argv)
 
     // 図形を描画する
     object.draw();
-
-#ifdef USE_IMGUI
-    // ImGui のフレームに描画する
-    ImGui::Render();
-#endif
 
     // カラーバッファを入れ替えてイベントを取り出す
     window.swapBuffers();
