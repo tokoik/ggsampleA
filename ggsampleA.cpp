@@ -21,7 +21,7 @@ static GgSimpleShader::Light light
 //
 // アプリケーション本体
 //
-void GgApp::main(int argc, const char* const* argv)
+int GgApp::main(int argc, const char* const* argv)
 {
   // ウィンドウを作成する (この行は変更しないでください)
   Window window{ argc > 1 ? argv[1] : "ggsampleA" };
@@ -158,4 +158,6 @@ void GgApp::main(int argc, const char* const* argv)
     // カラーバッファを入れ替えてイベントを取り出す
     window.swapBuffers();
   }
+
+  return 0;
 }
