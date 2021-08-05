@@ -49,19 +49,19 @@ void main(void)
   vec4 p = mv * pv;
 
   // 視点座標系における視線ベクトル
-  vec3 v = -normalize(p.xyz);
+  vec3 v = -normalize(vec3(p));
 
   // 視点座標系における光源の位置
   vec4 q = mv * lpos;
 
   // 視点座標系における光線ベクトル
-  vec3 l = normalize((q * p.w - q.w * p).xyz);
+  vec3 l = normalize(vec3(q * p.w - q.w * p));
 
   // 視点座標系における中間ベクトル
   vec3 h = normalize(l + v);
 
   // 視点座標系における法線ベクトル
-  vec3 n = normalize((mn * nv).xyz);
+  vec3 n = normalize(vec3(mn * nv));
 
   // 陰影計算
   idiff = max(dot(n, l), 0.0) * kdiff * ldiff + kamb * lamb;
