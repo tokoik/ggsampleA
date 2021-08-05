@@ -1309,6 +1309,7 @@ extern PFNGLWINDOWRECTANGLESEXTPROC glWindowRectanglesEXT;
 //! \endcond
 
 // 標準ライブラリ
+#include <cmath>
 #include <array>
 #include <vector>
 #include <string>
