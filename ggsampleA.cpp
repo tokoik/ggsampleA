@@ -87,9 +87,6 @@ int GgApp::main(int argc, const char* const* argv)
     // ImGui によるユーザインタフェース
     //
 
-    // ImGui のフレームを準備する
-    ImGui::NewFrame();
-
     //
     // メニューバー
     //
@@ -135,9 +132,6 @@ int GgApp::main(int argc, const char* const* argv)
     if (ImGui::SliderFloat3("Light Position", light.position.data(), -10.0f, 10.0f, "%.2f"))
       lightBuffer.loadPosition(light.position);
     ImGui::End();
-
-    // ImGui のフレームに描画する
-    ImGui::Render();
 #endif
 
     // 投影変換行列を設定する
