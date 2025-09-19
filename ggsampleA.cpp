@@ -6,6 +6,9 @@
 // ファイルダイアログ
 #include "nfd.h"
 
+// 図形ファイル名のフィルタ
+constexpr nfdfilteritem_t imageFilter[]{ "Wavefront OBJ", "obj" };
+
 // 形状データ
 static std::string model{ "logo.obj" };
 
@@ -102,7 +105,7 @@ int GgApp::main(int argc, const char* const* argv)
           nfdchar_t* filepath(nullptr);
 
           // ファイルダイアログを開く
-          if (NFD_OpenDialog("obj", nullptr, &filepath) == NFD_OKAY)
+          if (NFD_OpenDialog(&filepath, imageFilter, 1, nullptr) == NFD_OKAY)
           {
             // 画像を読み込む
             object = GgSimpleObj(filepath, true);
