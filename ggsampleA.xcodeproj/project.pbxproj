@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 54;
+	objectVersion = 77;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -120,10 +120,11 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 2600;
+				CLASSPREFIX = com.github.tokoik;
+				LastUpgradeCheck = 2640;
+				ORGANIZATIONNAME = "Kohe Tokoi";
 			};
 			buildConfigurationList = 7D1E90DD1123E2F7005E6C75 /* Build configuration list for PBXProject "ggsampleA" */;
-			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -134,6 +135,7 @@
 				fr,
 			);
 			mainGroup = 7D1E90D81123E2F7005E6C75;
+			preferredProjectObjectVersion = 77;
 			productRefGroup = 7D1E90EF1123E36C005E6C75 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
