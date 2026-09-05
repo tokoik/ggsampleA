@@ -145,6 +145,7 @@ if(APPLE)
         "-framework IOKit"
         "-framework CoreVideo"
         "-framework AppKit"
+        "-framework UniformTypeIdentifiers"
     )
 
     set_target_properties(${PROJECT_NAME} PROPERTIES
@@ -154,9 +155,11 @@ if(APPLE)
         MACOSX_BUNDLE_BUNDLE_NAME "${PROJECT_NAME}"
         MACOSX_BUNDLE_BUNDLE_VERSION "1.0"
         MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0"
+        MACOSX_BUNDLE_ICON_FILE "${ICON_FILE}"
         MACOSX_BUNDLE_COPYRIGHT "Copyright (c) 2018-2026 Kohe Tokoi. All rights reserved."
         XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.yourcompany.${PROJECT_NAME}"
         XCODE_GENERATE_SCHEME ON
+        XCODE_SCHEME_WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
     )
     set_source_files_properties(${SHADER_FILES} ${RESOURCE_FILES} ${ICON_FILE} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
     set_property(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" PROPERTY XCODE_GENERATE_SCHEME ON)
